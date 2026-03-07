@@ -36,10 +36,10 @@ jobs:
         key: ${{ secrets.VPS_SSH_KEY }}
         port: 22
         script: |
-          # Vérifier que les variables sont définies
-          echo "Host: $VPS_HOST"
-          echo "User: $VPS_USER"
-          echo "SSH Key length: ${#VPS_SSH_KEY}"
+          echo "=== DÉBUT DU DÉPLOIEMENT ==="
+          echo "Host: ${{ secrets.VPS_HOST }}"
+          echo "User: ${{ secrets.VPS_USER }}"
+          echo "SSH Key preview: ${{ secrets.VPS_SSH_KEY }}"
 
           # Aller dans le répertoire du projet
           cd /root/twitch-analyzer
