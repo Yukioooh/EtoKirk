@@ -44,14 +44,15 @@ function PublicSearch() {
     });
   }
 
-  function formatFollowDate(isoDate) {
-    if (!isoDate) return '-';
-    var date = new Date(isoDate);
-    return date.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+  function formatFollowDate(dateStr) {
+    if (!dateStr) return '-';
+    // La date vient du scraper au format "MM/DD/YYYYHH:MM AM/PM"
+    // On extrait juste la partie date et on la convertit en DD/MM/YYYY
+    var match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (match) {
+      return match[2] + '/' + match[1] + '/' + match[3];
+    }
+    return dateStr;
   }
 
   function getTraitorStatus(user) {
