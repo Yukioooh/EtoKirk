@@ -11,6 +11,7 @@ const collector = require('./services/collector');
 const chatBot = require('./services/chatBot');
 const analysisService = require('./services/analysis');
 const traitorService = require('./services/traitorService');
+const followScraper = require('./services/followScraper');
 const statsRoutes = require('./routes/stats');
 
 const app = express();
@@ -96,6 +97,17 @@ async function initialize() {
     console.log('[Cron] Verification des follows...');
     await traitorService.checkFollowsForRecentChatters(100);
   });
+
+  // Rafraichir le cache des follows des top traitres toutes les 30 minutes
+  cron.schedule('*/30 * * * *', () => {
+    console.log('[Cron] Rafraichissement cache follows...');
+    followScraper.refreshTopTraitorsFollows();
+  });
+
+  // Lancer un premier rafraichissement au demarrage (apres 10 secondes)
+  setTimeout(function() {
+    followScraper.refreshTopTraitorsFollows();
+  }, 10000);
 
   // Demarrer le serveur
   app.listen(PORT, () => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import './PublicSearch.css';
 
@@ -7,6 +7,70 @@ function PublicSearch() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [topTraitors, setTopTraitors] = useState([]);
+  const [loadingTop, setLoadingTop] = useState(true);
+  const refreshTimerRef = useRef(null);
+  const searchRefreshTimerRef = useRef(null);
+
+  useEffect(function() {
+    loadTopTraitors();
+    return function() {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+      if (searchRefreshTimerRef.current) clearTimeout(searchRefreshTimerRef.current);
+    };
+  }, []);
+
+  // Auto-refresh du Top 10 si des follows sont null
+  useEffect(function() {
+    if (topTraitors.length > 0) {
+      var hasNullFollows = topTraitors.some(function(t) {
+        return t.tikyjr.follows === null || t.etostark.follows === null;
+      });
+
+      if (hasNullFollows) {
+        refreshTimerRef.current = setTimeout(function() {
+          loadTopTraitors();
+        }, 5000);
+      }
+    }
+  }, [topTraitors]);
+
+  // Auto-refresh du resultat de recherche si follows null
+  useEffect(function() {
+    if (result && (result.tikyjr.follows === null || result.etostark.follows === null)) {
+      searchRefreshTimerRef.current = setTimeout(function() {
+        refreshSearch();
+      }, 5000);
+    }
+  }, [result]);
+
+  function loadTopTraitors() {
+    api.getTopTraitorsDetailed(10)
+      .then(function(response) {
+        if (response.success) {
+          setTopTraitors(response.data);
+        }
+      })
+      .catch(function(err) {
+        console.error('Erreur chargement top:', err);
+      })
+      .finally(function() {
+        setLoadingTop(false);
+      });
+  }
+
+  function refreshSearch() {
+    if (!result) return;
+    api.getViewerDetails(result.username)
+      .then(function(response) {
+        if (response.success && response.data) {
+          setResult(response.data);
+        }
+      })
+      .catch(function(err) {
+        console.error('Erreur refresh:', err);
+      });
+  }
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -110,7 +174,7 @@ function PublicSearch() {
                         <tr>
                           <td className="info-label">Follow</td>
                           <td className="info-value">
-                            {result.tikyjr.follows === true ? 'Oui' : result.tikyjr.follows === false ? 'Non' : '-'}
+                            {result.tikyjr.follows === true ? 'Oui' : result.tikyjr.follows === false ? 'Non' : <span className="loading-dots">...</span>}
                           </td>
                         </tr>
                         <tr>
@@ -136,7 +200,7 @@ function PublicSearch() {
                         <tr>
                           <td className="info-label">Follow</td>
                           <td className="info-value">
-                            {result.etostark.follows === true ? 'Oui' : result.etostark.follows === false ? 'Non' : '-'}
+                            {result.etostark.follows === true ? 'Oui' : result.etostark.follows === false ? 'Non' : <span className="loading-dots">...</span>}
                           </td>
                         </tr>
                         <tr>
@@ -163,6 +227,44 @@ function PublicSearch() {
             )}
           </div>
         )}
+
+        <div className="top-section">
+          <h2 className="top-title">Top 10 Traitres</h2>
+          {loadingTop ? (
+            <p className="loading-text">Chargement...</p>
+          ) : (
+            <div className="top-list">
+              {topTraitors.map(function(traitor, index) {
+                return (
+                  <div className="top-card" key={traitor.username}>
+                    <div className="top-rank">#{index + 1}</div>
+                    <div className="top-info">
+                      <div className="top-header">
+                        <span className="top-username">{traitor.username}</span>
+                        <span className="top-total">{traitor.totalMessages} msgs</span>
+                      </div>
+                      <div className="top-stats">
+                        <div className="top-stat">
+                          <span className="stat-label">TikyJr:</span>
+                          <span>{traitor.tikyjr.messages} msgs</span>
+                          <span>{traitor.tikyjr.follows === true ? '/ Follow' : traitor.tikyjr.follows === false ? '/ No follow' : <span className="loading-dots">/ ...</span>}</span>
+                        </div>
+                        <div className="top-stat">
+                          <span className="stat-label">Etostark:</span>
+                          <span>{traitor.etostark.messages} msgs</span>
+                          <span>{traitor.etostark.follows === true ? '/ Follow' : traitor.etostark.follows === false ? '/ No follow' : <span className="loading-dots">/ ...</span>}</span>
+                        </div>
+                      </div>
+                      <div className="top-dates">
+                        <span>Dernier msg: {formatDate(traitor.lastSeen)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

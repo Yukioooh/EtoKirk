@@ -238,8 +238,8 @@ router.get('/traitors/top', (req, res) => {
 });
 
 // GET /stats/traitors/top-detailed
-// Top traitres avec stats detaillees (pour le frontend)
-router.get('/traitors/top-detailed', async (req, res) => {
+// Top traitres avec stats detaillees (utilise le cache DB - instantane)
+router.get('/traitors/top-detailed', (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
 
@@ -251,25 +251,16 @@ router.get('/traitors/top-detailed', async (req, res) => {
       LIMIT ?
     `).all(limit);
 
-    // Pour chaque traitre, recuperer les infos de follow
-    const results = [];
-    for (var i = 0; i < traitors.length; i++) {
-      var t = traitors[i];
-      var followTikyjr = null;
-      var followEtostark = null;
+    // Utiliser le cache DB pour les follows (instantane)
+    const results = traitors.map(function(t) {
+      var followTikyjr = followScraper.getCachedFollows(t.username, 'tikyjr');
+      var followEtostark = followScraper.getCachedFollows(t.username, 'etostark__');
 
-      try {
-        var followInfo = await Promise.all([
-          followScraper.checkFollowsChannel(t.username, 'tikyjr'),
-          followScraper.checkFollowsChannel(t.username, 'etostark__')
-        ]);
-        followTikyjr = followInfo[0];
-        followEtostark = followInfo[1];
-      } catch (err) {
-        // Ignorer les erreurs de follow
-      }
+      // Si pas en cache, ajouter a la queue de scraping
+      if (!followTikyjr) followScraper.queueScrape(t.username);
+      if (!followEtostark) followScraper.queueScrape(t.username);
 
-      results.push({
+      return {
         username: t.username,
         totalMessages: t.messages_tikyjr + t.messages_etostark,
         tikyjr: {
@@ -284,8 +275,8 @@ router.get('/traitors/top-detailed', async (req, res) => {
         },
         firstSeen: t.first_seen * 1000,
         lastSeen: t.last_seen * 1000
-      });
-    }
+      };
+    });
 
     res.json({ success: true, data: results });
   } catch (error) {
@@ -333,7 +324,7 @@ router.get('/traitors/reports', (req, res) => {
 
 // GET /stats/viewer/:username
 // Recherche detaillee d'un viewer avec dates de follow
-router.get('/viewer/:username', async (req, res) => {
+router.get('/viewer/:username', (req, res) => {
   try {
     const username = req.params.username.toLowerCase();
 
@@ -359,19 +350,13 @@ router.get('/viewer/:username', async (req, res) => {
       ORDER BY timestamp DESC LIMIT 1
     `).get(username);
 
-    // Recuperer les infos de follow via scraping
-    let followTikyjr = null;
-    let followEtostark = null;
+    // Recuperer les infos de follow depuis le cache (instantane)
+    var followTikyjr = followScraper.getCachedFollows(username, 'tikyjr');
+    var followEtostark = followScraper.getCachedFollows(username, 'etostark__');
 
-    try {
-      const [tikyjrInfo, etostarkInfo] = await Promise.all([
-        followScraper.checkFollowsChannel(username, 'tikyjr'),
-        followScraper.checkFollowsChannel(username, 'etostark__')
-      ]);
-      followTikyjr = tikyjrInfo;
-      followEtostark = etostarkInfo;
-    } catch (err) {
-      console.error('[API] Erreur recuperation follows:', err.message);
+    // Si pas en cache, ajouter a la queue pour prochain rafraichissement
+    if (!followTikyjr || !followEtostark) {
+      followScraper.queueScrape(username);
     }
 
     // Utiliser last_seen si pas de message dans chat_messages
