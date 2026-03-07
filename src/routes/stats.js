@@ -3,6 +3,7 @@ const router = express.Router();
 const analysisService = require('../services/analysis');
 const traitorService = require('../services/traitorService');
 const followScraper = require('../services/followScraper');
+const vodChatScraper = require('../services/vodChatScraper');
 const { db } = require('../services/database');
 
 // GET /stats/viewers/timeline
@@ -339,6 +340,58 @@ router.get('/viewer/:username', async (req, res) => {
     };
 
     res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// ROUTES VOD SCRAPING
+// ============================================
+
+// POST /stats/vod/scrape
+// Lancer le scraping des VODs (peut prendre du temps)
+router.post('/vod/scrape', async (req, res) => {
+  try {
+    const maxVods = parseInt(req.query.max) || 10;
+    const streamer = req.query.streamer;
+
+    res.json({ success: true, message: 'Scraping demarre en arriere-plan' });
+
+    // Lancer en arriere-plan
+    if (streamer) {
+      vodChatScraper.scrapeStreamerVods(streamer, maxVods)
+        .then(function(result) {
+          console.log('[API] Scraping termine pour', streamer, ':', result);
+        })
+        .catch(function(err) {
+          console.error('[API] Erreur scraping:', err);
+        });
+    } else {
+      vodChatScraper.scrapeAllStreamers(maxVods)
+        .then(function(result) {
+          console.log('[API] Scraping termine:', result);
+        })
+        .catch(function(err) {
+          console.error('[API] Erreur scraping:', err);
+        });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /stats/vod/scraped
+// Liste des VODs deja scrapees
+router.get('/vod/scraped', (req, res) => {
+  try {
+    const vods = db.prepare(`
+      SELECT * FROM scraped_vods
+      ORDER BY scraped_at DESC
+      LIMIT 100
+    `).all();
+
+    res.json({ success: true, data: vods });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
