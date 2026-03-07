@@ -2,7 +2,7 @@ name: Deploy to VPS
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -10,73 +10,52 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            cd /root/twitch-analyzer
 
-    - name: Install dependencies
-      run: npm install
+            # Sauvegarder le fichier .env et la base de donnees
+            cp .env .env.backup 2>/dev/null || true
+            mkdir -p data/backup
+            cp data/*.db data/backup/ 2>/dev/null || true
 
-    - name: Install frontend dependencies
-      run: cd frontend && npm install
+            # Recuperer les derniers changements
+            git pull origin main
 
-    - name: Build frontend
-      run: cd frontend && npm run build
+            # Restaurer le fichier .env
+            cp .env.backup .env 2>/dev/null || true
 
-    - name: Deploy to VPS
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USER }}
-        key: ${{ secrets.VPS_SSH_KEY }}
-        port: 22
-        script: |
-          echo "=== DÉBUT DU DÉPLOIEMENT ==="
-          echo "Host: ${{ secrets.VPS_HOST }}"
-          echo "User: ${{ secrets.VPS_USER }}"
-          echo "SSH Key preview: ${{ secrets.VPS_SSH_KEY }}"
+            # Installer les dependances backend
+            npm install
 
-          # Aller dans le répertoire du projet
-          cd /root/twitch-analyzer
+            # Installer et build le frontend
+            cd frontend
+            npm install
+            npm run build
+            cd ..
 
-          # Arrêter l'application si elle tourne
-          pkill -f "node src/index.js" || true
-          pkill -f "npm start" || true
+            # Fixer les permissions
+            chmod -R 755 frontend/build/
 
-          # Sauvegarder les fichiers de configuration locaux
-          cp .env .env.backup 2>/dev/null || true
-          mkdir -p data/backup
-          cp data/*.db data/backup/ 2>/dev/null || true
+            # Redemarrer avec PM2
+            pm2 restart twitch-analyzer || pm2 start src/index.js --name twitch-analyzer
+            pm2 save
 
-          # Pull des derniers changements
-          git pull origin main
-
-          # Restaurer les fichiers locaux
-          cp .env.backup .env 2>/dev/null || true
-          cp data/backup/*.db data/ 2>/dev/null || true
-
-          # Installer les dépendances
-          npm install
-
-          # Installer les dépendances frontend
-          cd frontend && npm install && npm run build && cd ..
-
-          # Démarrer l'application en arrière-plan
-          nohup npm start > app.log 2>&1 &
-
-          # Attendre un peu que l'app démarre
-          sleep 5
-
-          # Vérifier que l'app tourne
-          if curl -f http://localhost:3001/api/health > /dev/null 2>&1; then
-            echo "✅ Application déployée avec succès !"
-          else
-            echo "❌ Erreur : l'application ne répond pas"
-            cat app.log
-            exit 1
-          fi
+            # Verifier que l'app repond
+            sleep 3
+            if curl -s http://localhost:3001/api/health | grep -q "ok"; then
+              echo "Deploiement reussi!"
+            else
+              echo "Erreur: l'application ne repond pas"
+              pm2 logs twitch-analyzer --lines 20
+              exit 1
+            fi

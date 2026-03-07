@@ -27,7 +27,14 @@ class TwitchApiService {
       console.log('[Twitch API] Authentification reussie');
       return true;
     } catch (error) {
-      console.error('[Twitch API] Erreur d\'authentification:', error.response?.data || error.message);
+      // Afficher le message d'erreur approprie
+      let errorMessage;
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data;
+      } else {
+        errorMessage = error.message;
+      }
+      console.error('[Twitch API] Erreur d\'authentification:', errorMessage);
       return false;
     }
   }
@@ -52,14 +59,23 @@ class TwitchApiService {
     await this.ensureAuthenticated();
 
     try {
-      const params = logins.map(login => `login=${login}`).join('&');
-      const response = await axios.get(`${this.baseUrl}/users?${params}`, {
+      const params = logins.map(function(login) {
+        return 'login=' + login;
+      }).join('&');
+
+      const response = await axios.get(this.baseUrl + '/users?' + params, {
         headers: this.getHeaders()
       });
 
       return response.data.data;
     } catch (error) {
-      console.error('[Twitch API] Erreur getUsers:', error.response?.data || error.message);
+      let errorMessage;
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data;
+      } else {
+        errorMessage = error.message;
+      }
+      console.error('[Twitch API] Erreur getUsers:', errorMessage);
       return [];
     }
   }
@@ -69,14 +85,23 @@ class TwitchApiService {
     await this.ensureAuthenticated();
 
     try {
-      const params = userLogins.map(login => `user_login=${login}`).join('&');
-      const response = await axios.get(`${this.baseUrl}/streams?${params}`, {
+      const params = userLogins.map(function(login) {
+        return 'user_login=' + login;
+      }).join('&');
+
+      const response = await axios.get(this.baseUrl + '/streams?' + params, {
         headers: this.getHeaders()
       });
 
       return response.data.data;
     } catch (error) {
-      console.error('[Twitch API] Erreur getStreams:', error.response?.data || error.message);
+      let errorMessage;
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data;
+      } else {
+        errorMessage = error.message;
+      }
+      console.error('[Twitch API] Erreur getStreams:', errorMessage);
       return [];
     }
   }
@@ -153,13 +178,27 @@ class TwitchApiService {
       );
 
       // Si data contient un element, l'utilisateur suit le broadcaster
-      return response.data.data && response.data.data.length > 0;
+      const followData = response.data.data;
+      if (followData && followData.length > 0) {
+        return true;
+      } else {
+        return false;
+      }
     } catch (error) {
       // 401/403 = pas les permissions necessaires pour cette requete
-      if (error.response?.status === 401 || error.response?.status === 403) {
+      const statusCode = error.response ? error.response.status : null;
+      if (statusCode === 401 || statusCode === 403) {
         return null; // Impossible de verifier
       }
-      console.error('[Twitch API] Erreur checkFollow:', error.response?.data || error.message);
+
+      // Afficher l'erreur
+      let errorMessage;
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data;
+      } else {
+        errorMessage = error.message;
+      }
+      console.error('[Twitch API] Erreur checkFollow:', errorMessage);
       return null;
     }
   }

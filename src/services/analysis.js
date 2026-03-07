@@ -11,7 +11,9 @@ class AnalysisService {
   }
 
   initialize(streamers) {
-    this.streamers = streamers.map(s => s.toLowerCase());
+    this.streamers = streamers.map(function(s) {
+      return s.toLowerCase();
+    });
   }
 
   // Analyser la chute de viewers quand un autre streamer lance son stream
@@ -37,11 +39,21 @@ class AnalysisService {
           AND is_live = 1
       `).get(affectedStreamer, eventTimestamp, eventTimestamp + threeMinutes);
 
-      const avgBefore = Math.round(beforeStats?.avg_viewers || 0);
-      const avgAfter = Math.round(afterStats?.avg_viewers || 0);
+      // Calculer les moyennes avec valeurs par defaut
+      let avgBeforeRaw = 0;
+      if (beforeStats && beforeStats.avg_viewers) {
+        avgBeforeRaw = beforeStats.avg_viewers;
+      }
+      const avgBefore = Math.round(avgBeforeRaw);
+
+      let avgAfterRaw = 0;
+      if (afterStats && afterStats.avg_viewers) {
+        avgAfterRaw = afterStats.avg_viewers;
+      }
+      const avgAfter = Math.round(avgAfterRaw);
 
       if (avgBefore === 0) {
-        console.log(`[Analysis] Pas de donnees avant l'evenement pour ${affectedStreamer}`);
+        console.log('[Analysis] Pas de donnees avant l\'evenement pour ' + affectedStreamer);
         return null;
       }
 
@@ -61,7 +73,14 @@ class AnalysisService {
           parseFloat(dropPercent)
         );
 
-        console.log(`[Analysis] Chute detectee: ${affectedStreamer} a perdu ${dropCount} viewers (${dropPercent}%) quand ${triggeringStreamer} a ${triggerEvent === 'START' ? 'lance' : 'coupe'} son stream`);
+        // Construire le message de log
+        let actionText;
+        if (triggerEvent === 'START') {
+          actionText = 'lance';
+        } else {
+          actionText = 'coupe';
+        }
+        console.log('[Analysis] Chute detectee: ' + affectedStreamer + ' a perdu ' + dropCount + ' viewers (' + dropPercent + '%) quand ' + triggeringStreamer + ' a ' + actionText + ' son stream');
       }
 
       return { avgBefore, avgAfter, dropCount, dropPercent };
@@ -79,21 +98,36 @@ class AnalysisService {
       const [streamerA, streamerB] = this.streamers;
 
       // Chatters uniques pour chaque streamer
-      const chattersA = db.prepare(`
+      const chattersARows = db.prepare(`
         SELECT DISTINCT username FROM chat_messages
         WHERE streamer = ? AND timestamp >= ? AND timestamp <= ?
-      `).all(streamerA, startTimestamp, endTimestamp).map(r => r.username);
+      `).all(streamerA, startTimestamp, endTimestamp);
 
-      const chattersB = db.prepare(`
+      const chattersA = [];
+      for (const row of chattersARows) {
+        chattersA.push(row.username);
+      }
+
+      const chattersBRows = db.prepare(`
         SELECT DISTINCT username FROM chat_messages
         WHERE streamer = ? AND timestamp >= ? AND timestamp <= ?
-      `).all(streamerB, startTimestamp, endTimestamp).map(r => r.username);
+      `).all(streamerB, startTimestamp, endTimestamp);
+
+      const chattersB = [];
+      for (const row of chattersBRows) {
+        chattersB.push(row.username);
+      }
 
       const setA = new Set(chattersA);
       const setB = new Set(chattersB);
 
-      // Intersection
-      const overlap = [...setA].filter(x => setB.has(x));
+      // Intersection - trouver les chatters communs
+      const overlap = [];
+      for (const username of setA) {
+        if (setB.has(username)) {
+          overlap.push(username);
+        }
+      }
       const overlapCount = overlap.length;
 
       // Pourcentage par rapport au plus petit groupe
@@ -139,22 +173,37 @@ class AnalysisService {
       const tenMinutes = 10 * 60;
 
       // Chatters du stream qui vient de se terminer (derniere heure)
-      const chattersFromEnding = db.prepare(`
+      const chattersFromEndingRows = db.prepare(`
         SELECT DISTINCT username FROM chat_messages
         WHERE streamer = ? AND timestamp >= ? AND timestamp <= ?
-      `).all(fromStreamer, endTimestamp - oneHour, endTimestamp).map(r => r.username);
+      `).all(fromStreamer, endTimestamp - oneHour, endTimestamp);
+
+      const chattersFromEnding = [];
+      for (const row of chattersFromEndingRows) {
+        chattersFromEnding.push(row.username);
+      }
 
       // Chatters apparus chez l'autre streamer dans les 10 minutes suivantes
-      const chattersAfter = db.prepare(`
+      const chattersAfterRows = db.prepare(`
         SELECT DISTINCT username FROM chat_messages
         WHERE streamer = ? AND timestamp > ? AND timestamp <= ?
-      `).all(toStreamer, endTimestamp, endTimestamp + tenMinutes).map(r => r.username);
+      `).all(toStreamer, endTimestamp, endTimestamp + tenMinutes);
+
+      const chattersAfter = [];
+      for (const row of chattersAfterRows) {
+        chattersAfter.push(row.username);
+      }
 
       const setFrom = new Set(chattersFromEnding);
       const setTo = new Set(chattersAfter);
 
       // Chatters qui ont migre
-      const migrated = [...setFrom].filter(x => setTo.has(x));
+      const migrated = [];
+      for (const username of setFrom) {
+        if (setTo.has(username)) {
+          migrated.push(username);
+        }
+      }
       const migratedCount = migrated.length;
 
       // Score de migration: pourcentage de chatters qui ont migre
@@ -204,12 +253,21 @@ class AnalysisService {
   // Obtenir les statistiques de chute moyennes
   getAverageDropStats() {
     try {
-      if (this.streamers.length < 2) return null;
+      if (this.streamers.length < 2) {
+        return null;
+      }
 
       const stats = {};
 
       for (const streamer of this.streamers) {
-        const otherStreamer = this.streamers.find(s => s !== streamer);
+        // Trouver l'autre streamer
+        let otherStreamer = null;
+        for (const s of this.streamers) {
+          if (s !== streamer) {
+            otherStreamer = s;
+            break;
+          }
+        }
 
         const result = db.prepare(`
           SELECT
@@ -222,13 +280,34 @@ class AnalysisService {
           WHERE affected_streamer = ? AND triggering_streamer = ?
         `).get(streamer, otherStreamer);
 
+        // Calculer les valeurs avec valeurs par defaut
+        let avgDrop = 0;
+        if (result.avg_drop) {
+          avgDrop = result.avg_drop;
+        }
+
+        let avgDropPercent = 0;
+        if (result.avg_drop_percent) {
+          avgDropPercent = result.avg_drop_percent;
+        }
+
+        let maxDrop = 0;
+        if (result.max_drop) {
+          maxDrop = result.max_drop;
+        }
+
+        let maxDropPercent = 0;
+        if (result.max_drop_percent) {
+          maxDropPercent = result.max_drop_percent;
+        }
+
         stats[streamer] = {
           affectedBy: otherStreamer,
           eventCount: result.event_count,
-          avgDrop: Math.round(result.avg_drop || 0),
-          avgDropPercent: parseFloat((result.avg_drop_percent || 0).toFixed(2)),
-          maxDrop: result.max_drop || 0,
-          maxDropPercent: parseFloat((result.max_drop_percent || 0).toFixed(2))
+          avgDrop: Math.round(avgDrop),
+          avgDropPercent: parseFloat(avgDropPercent.toFixed(2)),
+          maxDrop: maxDrop,
+          maxDropPercent: parseFloat(maxDropPercent.toFixed(2))
         };
       }
 
@@ -252,12 +331,17 @@ class AnalysisService {
           ORDER BY timestamp ASC
         `).all(streamer, startTimestamp, endTimestamp);
 
-        data[streamer] = rows.map(r => ({
-          timestamp: r.timestamp * 1000, // Convertir en ms pour JS
-          viewerCount: r.viewer_count,
-          isLive: r.is_live === 1,
-          gameName: r.game_name
-        }));
+        // Transformer les donnees
+        const transformedRows = [];
+        for (const row of rows) {
+          transformedRows.push({
+            timestamp: row.timestamp * 1000, // Convertir en ms pour JS
+            viewerCount: row.viewer_count,
+            isLive: row.is_live === 1,
+            gameName: row.game_name
+          });
+        }
+        data[streamer] = transformedRows;
       }
 
       return data;
@@ -270,14 +354,20 @@ class AnalysisService {
   // Obtenir tous les evenements de chute
   getDropEvents(limit = 50) {
     try {
-      return db.prepare(`
+      const rows = db.prepare(`
         SELECT * FROM viewer_drop_events
         ORDER BY timestamp DESC
         LIMIT ?
-      `).all(limit).map(r => ({
-        ...r,
-        timestamp: r.timestamp * 1000
-      }));
+      `).all(limit);
+
+      // Transformer les donnees
+      const results = [];
+      for (const row of rows) {
+        const transformed = Object.assign({}, row);
+        transformed.timestamp = row.timestamp * 1000;
+        results.push(transformed);
+      }
+      return results;
     } catch (error) {
       console.error('[Analysis] Erreur getDropEvents:', error.message);
       return [];
@@ -287,14 +377,20 @@ class AnalysisService {
   // Obtenir tous les evenements de migration
   getMigrationEvents(limit = 50) {
     try {
-      return db.prepare(`
+      const rows = db.prepare(`
         SELECT * FROM migration_events
         ORDER BY timestamp DESC
         LIMIT ?
-      `).all(limit).map(r => ({
-        ...r,
-        timestamp: r.timestamp * 1000
-      }));
+      `).all(limit);
+
+      // Transformer les donnees
+      const results = [];
+      for (const row of rows) {
+        const transformed = Object.assign({}, row);
+        transformed.timestamp = row.timestamp * 1000;
+        results.push(transformed);
+      }
+      return results;
     } catch (error) {
       console.error('[Analysis] Erreur getMigrationEvents:', error.message);
       return [];
@@ -304,15 +400,21 @@ class AnalysisService {
   // Obtenir l'historique des chevauchements
   getOverlapHistory(limit = 30) {
     try {
-      return db.prepare(`
+      const rows = db.prepare(`
         SELECT * FROM chatter_overlap
         ORDER BY period_end DESC
         LIMIT ?
-      `).all(limit).map(r => ({
-        ...r,
-        periodStart: r.period_start * 1000,
-        periodEnd: r.period_end * 1000
-      }));
+      `).all(limit);
+
+      // Transformer les donnees
+      const results = [];
+      for (const row of rows) {
+        const transformed = Object.assign({}, row);
+        transformed.periodStart = row.period_start * 1000;
+        transformed.periodEnd = row.period_end * 1000;
+        results.push(transformed);
+      }
+      return results;
     } catch (error) {
       console.error('[Analysis] Erreur getOverlapHistory:', error.message);
       return [];
@@ -352,14 +454,40 @@ class AnalysisService {
           LIMIT 1
         `).get(streamer);
 
+        // Calculer les valeurs avec valeurs par defaut
+        let maxViewers = 0;
+        if (viewerStats.max_viewers) {
+          maxViewers = viewerStats.max_viewers;
+        }
+
+        let avgViewersRaw = 0;
+        if (viewerStats.avg_viewers) {
+          avgViewersRaw = viewerStats.avg_viewers;
+        }
+
+        let liveMinutes = 0;
+        if (viewerStats.live_checks) {
+          liveMinutes = viewerStats.live_checks;
+        }
+
+        let currentlyLive = false;
+        if (currentStatus && currentStatus.is_live === 1) {
+          currentlyLive = true;
+        }
+
+        let currentViewers = 0;
+        if (currentStatus && currentStatus.viewer_count) {
+          currentViewers = currentStatus.viewer_count;
+        }
+
         stats24h[streamer] = {
-          maxViewers: viewerStats.max_viewers || 0,
-          avgViewers: Math.round(viewerStats.avg_viewers || 0),
-          liveMinutes: (viewerStats.live_checks || 0),
+          maxViewers: maxViewers,
+          avgViewers: Math.round(avgViewersRaw),
+          liveMinutes: liveMinutes,
           uniqueChatters: chatStats.unique_chatters,
           totalMessages: chatStats.total_messages,
-          currentlyLive: currentStatus?.is_live === 1,
-          currentViewers: currentStatus?.viewer_count || 0
+          currentlyLive: currentlyLive,
+          currentViewers: currentViewers
         };
       }
 
@@ -394,23 +522,42 @@ class AnalysisService {
 
   // Version sans sauvegarde pour les calculs temporaires
   calculateChatterOverlapWithoutSave(startTimestamp, endTimestamp) {
-    if (this.streamers.length < 2) return null;
+    if (this.streamers.length < 2) {
+      return null;
+    }
 
     const [streamerA, streamerB] = this.streamers;
 
-    const chattersA = db.prepare(`
+    const chattersARows = db.prepare(`
       SELECT DISTINCT username FROM chat_messages
       WHERE streamer = ? AND timestamp >= ? AND timestamp <= ?
-    `).all(streamerA, startTimestamp, endTimestamp).map(r => r.username);
+    `).all(streamerA, startTimestamp, endTimestamp);
 
-    const chattersB = db.prepare(`
+    const chattersA = [];
+    for (const row of chattersARows) {
+      chattersA.push(row.username);
+    }
+
+    const chattersBRows = db.prepare(`
       SELECT DISTINCT username FROM chat_messages
       WHERE streamer = ? AND timestamp >= ? AND timestamp <= ?
-    `).all(streamerB, startTimestamp, endTimestamp).map(r => r.username);
+    `).all(streamerB, startTimestamp, endTimestamp);
+
+    const chattersB = [];
+    for (const row of chattersBRows) {
+      chattersB.push(row.username);
+    }
 
     const setA = new Set(chattersA);
     const setB = new Set(chattersB);
-    const overlap = [...setA].filter(x => setB.has(x));
+
+    // Trouver les chatters communs
+    const overlap = [];
+    for (const username of setA) {
+      if (setB.has(username)) {
+        overlap.push(username);
+      }
+    }
 
     const minSize = Math.min(setA.size, setB.size);
     let overlapPercent;

@@ -31,19 +31,31 @@ class TraitorService {
         LIMIT ?
       `).all(limit);
 
-      return traitors.map(t => ({
-        username: t.username,
-        isConfirmedTraitor: t.is_traitor === 1,
-        traitorLevel: t.traitor_level || (t.is_traitor === 1 ? 'TRAITRE CONFIRME' : null),
-        traitorScore: t.traitor_score,
-        messagesTikyjr: t.messages_tikyjr,
-        messagesEtostark: t.messages_etostark,
-        totalMessages: t.messages_tikyjr + t.messages_etostark,
-        followsTikyjr: t.follows_tikyjr,
-        followsEtostark: t.follows_etostark,
-        firstSeen: t.first_seen * 1000,
-        lastSeen: t.last_seen * 1000
-      }));
+      return traitors.map(function(t) {
+        // Determiner le niveau de traitre
+        let traitorLevel;
+        if (t.traitor_level) {
+          traitorLevel = t.traitor_level;
+        } else if (t.is_traitor === 1) {
+          traitorLevel = 'TRAITRE CONFIRME';
+        } else {
+          traitorLevel = null;
+        }
+
+        return {
+          username: t.username,
+          isConfirmedTraitor: t.is_traitor === 1,
+          traitorLevel: traitorLevel,
+          traitorScore: t.traitor_score,
+          messagesTikyjr: t.messages_tikyjr,
+          messagesEtostark: t.messages_etostark,
+          totalMessages: t.messages_tikyjr + t.messages_etostark,
+          followsTikyjr: t.follows_tikyjr,
+          followsEtostark: t.follows_etostark,
+          firstSeen: t.first_seen * 1000,
+          lastSeen: t.last_seen * 1000
+        };
+      });
     } catch (error) {
       console.error('[TraitorService] Erreur getAllTraitors:', error.message);
       return [];
@@ -54,15 +66,22 @@ class TraitorService {
   getStats() {
     try {
       const stats = getTraitorStats.get();
+
+      // Calculer le pourcentage de traitres
+      let traitorPercent;
+      if (stats.total_chatters > 0) {
+        traitorPercent = ((stats.confirmed_traitors / stats.total_chatters) * 100).toFixed(2);
+      } else {
+        traitorPercent = 0;
+      }
+
       return {
         totalChatters: stats.total_chatters,
         chattersTikyjr: stats.chatters_tikyjr,
         chattersEtostark: stats.chatters_etostark,
         confirmedTraitors: stats.confirmed_traitors,
         potentialTraitors: stats.potential_traitors,
-        traitorPercent: stats.total_chatters > 0
-          ? ((stats.confirmed_traitors / stats.total_chatters) * 100).toFixed(2)
-          : 0
+        traitorPercent: traitorPercent
       };
     } catch (error) {
       console.error('[TraitorService] Erreur getStats:', error.message);
@@ -124,15 +143,30 @@ class TraitorService {
             followsEtostarkValue = null;
           }
 
+          // Determiner les valeurs pour les CASE statements
+          let tikyjrForCase;
+          if (followsTikyjrValue === 1) {
+            tikyjrForCase = 1;
+          } else {
+            tikyjrForCase = 0;
+          }
+
+          let etostarkForCase;
+          if (followsEtostarkValue === 1) {
+            etostarkForCase = 1;
+          } else {
+            etostarkForCase = 0;
+          }
+
           // Mettre a jour dans la base
           updateChatterFollow.run(
             followsTikyjrValue,
             followsEtostarkValue,
             now,
-            followsTikyjrValue === 1 ? 1 : 0,
-            followsEtostarkValue === 1 ? 1 : 0,
-            followsTikyjrValue === 1 ? 1 : 0,
-            followsEtostarkValue === 1 ? 1 : 0,
+            tikyjrForCase,
+            etostarkForCase,
+            tikyjrForCase,
+            etostarkForCase,
             username
           );
 

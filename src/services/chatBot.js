@@ -18,7 +18,9 @@ class ChatBotService {
   }
 
   initialize(channels) {
-    this.channels = channels.map(c => c.toLowerCase());
+    this.channels = channels.map(function(c) {
+      return c.toLowerCase();
+    });
 
     // Configuration TMI.js - connexion anonyme (lecture seule)
     this.client = new tmi.Client({
@@ -33,8 +35,9 @@ class ChatBotService {
     this.setupEventHandlers();
 
     // Flush le buffer toutes les 5 secondes pour eviter trop d'ecritures
-    this.flushInterval = setInterval(() => {
-      this.flushMessageBuffer();
+    const self = this;
+    this.flushInterval = setInterval(function() {
+      self.flushMessageBuffer();
     }, 5000);
 
     console.log(`[ChatBot] Initialise pour les channels: ${this.channels.join(', ')}`);

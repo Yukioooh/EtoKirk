@@ -1,6 +1,5 @@
 const twitchApi = require('./twitchApi');
 const {
-  db,
   insertViewerStats,
   insertStreamEvent,
   upsertStreamState,
@@ -15,8 +14,10 @@ class CollectorService {
   }
 
   initialize(streamers) {
-    this.streamers = streamers.map(s => s.toLowerCase());
-    console.log(`[Collector] Initialise pour les streamers: ${this.streamers.join(', ')}`);
+    this.streamers = streamers.map(function(s) {
+      return s.toLowerCase();
+    });
+    console.log('[Collector] Initialise pour les streamers: ' + this.streamers.join(', '));
   }
 
   async collectViewerStats() {
@@ -32,12 +33,20 @@ class CollectorService {
       for (const streamer of this.streamers) {
         const stat = stats[streamer];
 
+        // Convertir le booleen en entier pour la base de donnees
+        let isLiveValue;
+        if (stat.isLive) {
+          isLiveValue = 1;
+        } else {
+          isLiveValue = 0;
+        }
+
         // Enregistrer les stats de viewers
         insertViewerStats.run(
           streamer,
           timestamp,
           stat.viewerCount,
-          stat.isLive ? 1 : 0,
+          isLiveValue,
           stat.gameName,
           stat.title
         );
@@ -46,7 +55,19 @@ class CollectorService {
         await this.checkStreamStateChange(streamer, stat, timestamp);
       }
 
-      console.log(`[Collector] Stats collectees - ${this.streamers.map(s => `${s}: ${stats[s].viewerCount} viewers (${stats[s].isLive ? 'LIVE' : 'OFFLINE'})`).join(', ')}`);
+      // Construire le message de log
+      const logParts = [];
+      for (const streamer of this.streamers) {
+        const stat = stats[streamer];
+        let statusText;
+        if (stat.isLive) {
+          statusText = 'LIVE';
+        } else {
+          statusText = 'OFFLINE';
+        }
+        logParts.push(streamer + ': ' + stat.viewerCount + ' viewers (' + statusText + ')');
+      }
+      console.log('[Collector] Stats collectees - ' + logParts.join(', '));
     } catch (error) {
       console.error('[Collector] Erreur lors de la collecte:', error.message);
     }
@@ -64,9 +85,15 @@ class CollectorService {
       insertStreamEvent.run(streamer, 'START', timestamp, currentStats.viewerCount);
 
       // Declencher l'analyse de chute de viewers pour l'autre streamer
-      const otherStreamer = this.streamers.find(s => s !== streamer);
+      let otherStreamer = null;
+      for (const s of this.streamers) {
+        if (s !== streamer) {
+          otherStreamer = s;
+          break;
+        }
+      }
       if (otherStreamer) {
-        setTimeout(() => {
+        setTimeout(function() {
           analysisService.analyzeViewerDrop(otherStreamer, streamer, 'START', timestamp);
         }, 3 * 60 * 1000); // Attendre 3 minutes pour avoir les donnees "apres"
       }
@@ -79,18 +106,32 @@ class CollectorService {
       insertStreamEvent.run(streamer, 'END', timestamp, 0);
 
       // Declencher l'analyse de migration vers l'autre streamer
-      const otherStreamer = this.streamers.find(s => s !== streamer);
-      if (otherStreamer) {
-        setTimeout(() => {
-          analysisService.analyzeMigration(streamer, otherStreamer, timestamp);
+      let otherStreamerForMigration = null;
+      for (const s of this.streamers) {
+        if (s !== streamer) {
+          otherStreamerForMigration = s;
+          break;
+        }
+      }
+      if (otherStreamerForMigration) {
+        setTimeout(function() {
+          analysisService.analyzeMigration(streamer, otherStreamerForMigration, timestamp);
         }, 10 * 60 * 1000); // Attendre 10 minutes
       }
+    }
+
+    // Convertir le booleen en entier
+    let isNowLiveValue;
+    if (isNowLive) {
+      isNowLiveValue = 1;
+    } else {
+      isNowLiveValue = 0;
     }
 
     // Mettre a jour l'etat
     upsertStreamState.run(
       streamer,
-      isNowLive ? 1 : 0,
+      isNowLiveValue,
       timestamp,
       currentStats.streamId
     );
@@ -103,14 +144,15 @@ class CollectorService {
     }
 
     this.isRunning = true;
-    console.log(`[Collector] Demarrage avec intervalle de ${intervalSeconds} secondes`);
+    console.log('[Collector] Demarrage avec intervalle de ' + intervalSeconds + ' secondes');
 
     // Premiere collecte immediate
     this.collectViewerStats();
 
     // Puis collectes regulieres
-    this.interval = setInterval(() => {
-      this.collectViewerStats();
+    const self = this;
+    this.interval = setInterval(function() {
+      self.collectViewerStats();
     }, intervalSeconds * 1000);
   }
 
