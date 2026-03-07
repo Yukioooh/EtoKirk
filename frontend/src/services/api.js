@@ -113,6 +113,12 @@ const api = {
       params: { days }
     });
     return response.data;
+  },
+
+  // Recherche detaillee d'un viewer
+  getViewerDetails: async (username) => {
+    const response = await axios.get(`${API_BASE}/stats/viewer/${encodeURIComponent(username)}`);
+    return response.data;
   }
 };
 
