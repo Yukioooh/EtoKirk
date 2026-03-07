@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const analysisService = require('../services/analysis');
 const traitorService = require('../services/traitorService');
-const twitchApi = require('../services/twitchApi');
+const followScraper = require('../services/followScraper');
 const { db } = require('../services/database');
 
 // GET /stats/viewers/timeline
@@ -302,14 +302,14 @@ router.get('/viewer/:username', async (req, res) => {
       ORDER BY timestamp DESC LIMIT 1
     `).get(username);
 
-    // Recuperer les infos de follow via l'API Twitch
+    // Recuperer les infos de follow via scraping
     let followTikyjr = null;
     let followEtostark = null;
 
     try {
       const [tikyjrInfo, etostarkInfo] = await Promise.all([
-        twitchApi.getFollowInfo(username, 'tikyjr'),
-        twitchApi.getFollowInfo(username, 'etostark__')
+        followScraper.checkFollowsChannel(username, 'tikyjr'),
+        followScraper.checkFollowsChannel(username, 'etostark__')
       ]);
       followTikyjr = tikyjrInfo;
       followEtostark = etostarkInfo;
