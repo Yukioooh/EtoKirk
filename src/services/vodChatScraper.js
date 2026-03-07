@@ -299,10 +299,8 @@ class VodChatScraper {
       var messages = await this.scrapeVodChat(vod.id, vod.createdAt, streamerLogin, vod.duration);
 
       if (messages.length > 0) {
-        // Inserer les messages
-        this.insertMessages(messages, streamerLogin);
-
-        // Mettre a jour les chatters
+        // Mettre a jour uniquement la table chatters (pas de doublons)
+        // On n'insere plus dans chat_messages pour eviter les doublons
         this.updateChatters(messages, streamerLogin);
 
         totalMessages += messages.length;
