@@ -7,6 +7,7 @@ Ce guide explique comment configurer le déploiement automatique sur votre VPS �
 ### 📋 Prérequis
 
 - Un VPS Linux (Ubuntu/Debian recommandé)
+- **Node.js 20+** (sera installé automatiquement)
 - Un compte GitHub
 - Accès SSH à votre VPS
 

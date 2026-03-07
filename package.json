@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Analyse de correlation entre streamers TikyJr et Etostark",
   "main": "src/index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
