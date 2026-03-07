@@ -237,6 +237,62 @@ router.get('/traitors/top', (req, res) => {
   }
 });
 
+// GET /stats/traitors/top-detailed
+// Top traitres avec stats detaillees (pour le frontend)
+router.get('/traitors/top-detailed', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+
+    // Recuperer les top traitres
+    const traitors = db.prepare(`
+      SELECT * FROM chatters
+      WHERE is_traitor = 1
+      ORDER BY (messages_tikyjr + messages_etostark) DESC
+      LIMIT ?
+    `).all(limit);
+
+    // Pour chaque traitre, recuperer les infos de follow
+    const results = [];
+    for (var i = 0; i < traitors.length; i++) {
+      var t = traitors[i];
+      var followTikyjr = null;
+      var followEtostark = null;
+
+      try {
+        var followInfo = await Promise.all([
+          followScraper.checkFollowsChannel(t.username, 'tikyjr'),
+          followScraper.checkFollowsChannel(t.username, 'etostark__')
+        ]);
+        followTikyjr = followInfo[0];
+        followEtostark = followInfo[1];
+      } catch (err) {
+        // Ignorer les erreurs de follow
+      }
+
+      results.push({
+        username: t.username,
+        totalMessages: t.messages_tikyjr + t.messages_etostark,
+        tikyjr: {
+          messages: t.messages_tikyjr,
+          follows: followTikyjr ? followTikyjr.follows : null,
+          followedAt: followTikyjr ? followTikyjr.followedAt : null
+        },
+        etostark: {
+          messages: t.messages_etostark,
+          follows: followEtostark ? followEtostark.follows : null,
+          followedAt: followEtostark ? followEtostark.followedAt : null
+        },
+        firstSeen: t.first_seen * 1000,
+        lastSeen: t.last_seen * 1000
+      });
+    }
+
+    res.json({ success: true, data: results });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // GET /stats/traitors/stats
 // Statistiques globales sur les traitres
 router.get('/traitors/stats', (req, res) => {
@@ -318,6 +374,12 @@ router.get('/viewer/:username', async (req, res) => {
       console.error('[API] Erreur recuperation follows:', err.message);
     }
 
+    // Utiliser last_seen si pas de message dans chat_messages
+    const lastMsgTiky = lastMessageTikyjr ? lastMessageTikyjr.timestamp * 1000 :
+                        (chatter.seen_at_tikyjr ? chatter.last_seen * 1000 : null);
+    const lastMsgEto = lastMessageEtostark ? lastMessageEtostark.timestamp * 1000 :
+                       (chatter.seen_at_etostark ? chatter.last_seen * 1000 : null);
+
     const result = {
       username: chatter.username,
       isTraitor: chatter.is_traitor === 1,
@@ -325,13 +387,13 @@ router.get('/viewer/:username', async (req, res) => {
       traitorScore: chatter.traitor_score,
       tikyjr: {
         messages: chatter.messages_tikyjr,
-        lastMessage: lastMessageTikyjr ? lastMessageTikyjr.timestamp * 1000 : null,
+        lastMessage: lastMsgTiky,
         follows: followTikyjr ? followTikyjr.follows : null,
         followedAt: followTikyjr ? followTikyjr.followedAt : null
       },
       etostark: {
         messages: chatter.messages_etostark,
-        lastMessage: lastMessageEtostark ? lastMessageEtostark.timestamp * 1000 : null,
+        lastMessage: lastMsgEto,
         follows: followEtostark ? followEtostark.follows : null,
         followedAt: followEtostark ? followEtostark.followedAt : null
       },

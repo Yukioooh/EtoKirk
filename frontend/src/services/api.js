@@ -93,6 +93,14 @@ const api = {
     return response.data;
   },
 
+  // Traitors - Top traitres avec details (follows, dates)
+  getTopTraitorsDetailed: async (limit = 10) => {
+    const response = await axios.get(`${API_BASE}/stats/traitors/top-detailed`, {
+      params: { limit }
+    });
+    return response.data;
+  },
+
   // Traitors - Stats globales
   getTraitorStats: async () => {
     const response = await axios.get(`${API_BASE}/stats/traitors/stats`);

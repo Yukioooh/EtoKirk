@@ -8,6 +8,7 @@ import DropEventsCard from './components/DropEventsCard';
 import MigrationCard from './components/MigrationCard';
 import TraitorCard from './components/TraitorCard';
 import PublicSearch from './pages/PublicSearch';
+import TopTraitors from './pages/TopTraitors';
 
 function Dashboard() {
   return (
@@ -34,6 +35,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<PublicSearch />} />
+      <Route path="/top" element={<TopTraitors />} />
       <Route path="/dashboard" element={<Dashboard />} />
     </Routes>
   );
