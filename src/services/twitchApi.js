@@ -203,6 +203,47 @@ class TwitchApiService {
     }
   }
 
+  // Obtenir les infos de follow avec la date
+  async getFollowInfo(chatterLogin, broadcasterLogin) {
+    await this.ensureAuthenticated();
+
+    try {
+      const [chatterId, broadcasterId] = await Promise.all([
+        this.getUserId(chatterLogin),
+        this.getUserId(broadcasterLogin)
+      ]);
+
+      if (!chatterId || !broadcasterId) {
+        return null;
+      }
+
+      const response = await axios.get(
+        `${this.baseUrl}/channels/followers?broadcaster_id=${broadcasterId}&user_id=${chatterId}`,
+        { headers: this.getHeaders() }
+      );
+
+      const followData = response.data.data;
+      if (followData && followData.length > 0) {
+        return {
+          follows: true,
+          followedAt: followData[0].followed_at
+        };
+      } else {
+        return {
+          follows: false,
+          followedAt: null
+        };
+      }
+    } catch (error) {
+      const statusCode = error.response ? error.response.status : null;
+      if (statusCode === 401 || statusCode === 403) {
+        return null;
+      }
+      console.error('[Twitch API] Erreur getFollowInfo:', error.message);
+      return null;
+    }
+  }
+
   // Verifier les follows en batch (avec rate limiting)
   async checkFollowsBatch(chatterLogins, broadcasterLogin, delayMs = 100) {
     const results = new Map();

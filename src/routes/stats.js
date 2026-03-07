@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const analysisService = require('../services/analysis');
 const traitorService = require('../services/traitorService');
+const twitchApi = require('../services/twitchApi');
 const { db } = require('../services/database');
 
 // GET /stats/viewers/timeline
@@ -268,6 +269,76 @@ router.get('/traitors/reports', (req, res) => {
     const days = parseInt(req.query.days) || 30;
     const reports = traitorService.getReportHistory(days);
     res.json({ success: true, data: reports });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /stats/viewer/:username
+// Recherche detaillee d'un viewer avec dates de follow
+router.get('/viewer/:username', async (req, res) => {
+  try {
+    const username = req.params.username.toLowerCase();
+
+    // Chercher dans la base de donnees
+    const chatter = db.prepare(`
+      SELECT * FROM chatters WHERE LOWER(username) = ?
+    `).get(username);
+
+    if (!chatter) {
+      return res.json({ success: true, data: null });
+    }
+
+    // Recuperer le dernier message pour chaque streamer
+    const lastMessageTikyjr = db.prepare(`
+      SELECT timestamp FROM chat_messages
+      WHERE LOWER(username) = ? AND streamer = 'tikyjr'
+      ORDER BY timestamp DESC LIMIT 1
+    `).get(username);
+
+    const lastMessageEtostark = db.prepare(`
+      SELECT timestamp FROM chat_messages
+      WHERE LOWER(username) = ? AND streamer = 'etostark__'
+      ORDER BY timestamp DESC LIMIT 1
+    `).get(username);
+
+    // Recuperer les infos de follow via l'API Twitch
+    let followTikyjr = null;
+    let followEtostark = null;
+
+    try {
+      const [tikyjrInfo, etostarkInfo] = await Promise.all([
+        twitchApi.getFollowInfo(username, 'tikyjr'),
+        twitchApi.getFollowInfo(username, 'etostark__')
+      ]);
+      followTikyjr = tikyjrInfo;
+      followEtostark = etostarkInfo;
+    } catch (err) {
+      console.error('[API] Erreur recuperation follows:', err.message);
+    }
+
+    const result = {
+      username: chatter.username,
+      isTraitor: chatter.is_traitor === 1,
+      traitorLevel: chatter.traitor_level,
+      traitorScore: chatter.traitor_score,
+      tikyjr: {
+        messages: chatter.messages_tikyjr,
+        lastMessage: lastMessageTikyjr ? lastMessageTikyjr.timestamp * 1000 : null,
+        follows: followTikyjr ? followTikyjr.follows : null,
+        followedAt: followTikyjr ? followTikyjr.followedAt : null
+      },
+      etostark: {
+        messages: chatter.messages_etostark,
+        lastMessage: lastMessageEtostark ? lastMessageEtostark.timestamp * 1000 : null,
+        follows: followEtostark ? followEtostark.follows : null,
+        followedAt: followEtostark ? followEtostark.followedAt : null
+      },
+      firstSeen: chatter.first_seen * 1000,
+      lastSeen: chatter.last_seen * 1000
+    };
+
+    res.json({ success: true, data: result });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
