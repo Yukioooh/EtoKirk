@@ -1,6 +1,6 @@
 const axios = require('axios');
 const twitchApi = require('./twitchApi');
-const { db, insertChatMessage, upsertChatter } = require('./database');
+const { db, upsertChatter } = require('./database');
 
 // Client ID pour les requetes GQL (celui de Twitch web)
 const GQL_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
@@ -56,25 +56,43 @@ class VodChatScraper {
   }
 
   // Recuperer les commentaires d'une VOD via l'API GQL
-  async getVodComments(videoId, cursor = null) {
+  async getVodComments(videoId, contentOffsetSeconds = 0) {
     try {
-      var variables = {
-        videoID: videoId,
-        first: 100
-      };
-
-      if (cursor) {
-        variables.after = cursor;
-      }
+      var query = `
+        query VideoCommentsByOffsetOrCursor($videoID: ID!, $contentOffsetSeconds: Int) {
+          video(id: $videoID) {
+            id
+            comments(contentOffsetSeconds: $contentOffsetSeconds) {
+              edges {
+                cursor
+                node {
+                  id
+                  commenter {
+                    id
+                    login
+                    displayName
+                  }
+                  contentOffsetSeconds
+                  message {
+                    fragments {
+                      text
+                    }
+                  }
+                }
+              }
+              pageInfo {
+                hasNextPage
+              }
+            }
+          }
+        }
+      `;
 
       var response = await axios.post('https://gql.twitch.tv/gql', {
-        operationName: 'VideoCommentsByOffsetOrCursor',
-        variables: variables,
-        extensions: {
-          persistedQuery: {
-            version: 1,
-            sha256Hash: 'b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582f7abf8e64b6e'
-          }
+        query: query,
+        variables: {
+          videoID: videoId,
+          contentOffsetSeconds: contentOffsetSeconds
         }
       }, {
         headers: {
@@ -88,28 +106,44 @@ class VodChatScraper {
         return data.data.video.comments;
       }
 
+      // Debug: afficher la reponse si pas de comments
+      if (data && data.errors) {
+        console.error('[VOD Scraper] GQL Errors:', JSON.stringify(data.errors));
+      }
+
       return { edges: [], pageInfo: { hasNextPage: false } };
     } catch (error) {
       console.error('[VOD Scraper] Erreur getVodComments:', error.message);
+      if (error.response && error.response.data) {
+        console.error('[VOD Scraper] Response:', JSON.stringify(error.response.data));
+      }
       return { edges: [], pageInfo: { hasNextPage: false } };
     }
   }
 
   // Scraper tous les commentaires d'une VOD
-  async scrapeVodChat(videoId, videoCreatedAt, streamerLogin) {
+  async scrapeVodChat(videoId, videoCreatedAt, streamerLogin, vodDuration) {
     console.log('[VOD Scraper] Scraping VOD', videoId, 'pour', streamerLogin);
 
     var messages = [];
-    var cursor = null;
+    var currentOffset = 0;
     var hasNextPage = true;
     var pageCount = 0;
+    var maxOffset = this.parseDuration(vodDuration);
 
     // Timestamp de debut de la VOD
     var vodStartTime = Math.floor(new Date(videoCreatedAt).getTime() / 1000);
 
-    while (hasNextPage) {
-      var result = await this.getVodComments(videoId, cursor);
+    while (hasNextPage && currentOffset < maxOffset) {
+      var result = await this.getVodComments(videoId, currentOffset);
       var edges = result.edges || [];
+
+      if (edges.length === 0) {
+        hasNextPage = false;
+        break;
+      }
+
+      var lastOffset = currentOffset;
 
       for (var i = 0; i < edges.length; i++) {
         var edge = edges[i];
@@ -134,18 +168,22 @@ class VodChatScraper {
             timestamp: vodStartTime + offsetSeconds,
             messageLength: messageText.length
           });
+
+          // Mettre a jour le dernier offset vu
+          if (offsetSeconds > lastOffset) {
+            lastOffset = offsetSeconds;
+          }
         }
       }
 
-      // Pagination
-      if (result.pageInfo && result.pageInfo.hasNextPage && edges.length > 0) {
-        cursor = edges[edges.length - 1].cursor;
-        hasNextPage = true;
+      // Pagination: avancer de 30 secondes apres le dernier message
+      if (result.pageInfo && result.pageInfo.hasNextPage) {
+        currentOffset = lastOffset + 30;
         pageCount++;
 
         // Log progression
         if (pageCount % 10 === 0) {
-          console.log('[VOD Scraper] VOD', videoId, '- Page', pageCount, '-', messages.length, 'messages');
+          console.log('[VOD Scraper] VOD', videoId, '- Offset', currentOffset + 's -', messages.length, 'messages');
         }
 
         // Petit delai pour eviter le rate limiting
@@ -195,7 +233,6 @@ class VodChatScraper {
 
   // Mettre a jour la table chatters avec les nouveaux usernames
   updateChatters(messages, streamer) {
-    var now = Math.floor(Date.now() / 1000);
     var isTikyjr = streamer === 'tikyjr' ? 1 : 0;
     var isEtostark = streamer === 'etostark__' ? 1 : 0;
 
@@ -257,9 +294,9 @@ class VodChatScraper {
         continue;
       }
 
-      console.log('[VOD Scraper] Scraping VOD', (i + 1) + '/' + vods.length, ':', vod.title);
+      console.log('[VOD Scraper] Scraping VOD', (i + 1) + '/' + vods.length, ':', vod.title, '(' + vod.duration + ')');
 
-      var messages = await this.scrapeVodChat(vod.id, vod.createdAt, streamerLogin);
+      var messages = await this.scrapeVodChat(vod.id, vod.createdAt, streamerLogin, vod.duration);
 
       if (messages.length > 0) {
         // Inserer les messages
