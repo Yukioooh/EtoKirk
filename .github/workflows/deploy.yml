@@ -1,0 +1,77 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Install frontend dependencies
+      run: cd frontend && npm install
+
+    - name: Build frontend
+      run: cd frontend && npm run build
+
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: 22
+        script: |
+          # Aller dans le répertoire du projet
+          cd /root/twitch-analyzer
+
+          # Arrêter l'application si elle tourne
+          pkill -f "node src/index.js" || true
+          pkill -f "npm start" || true
+
+          # Sauvegarder les fichiers de configuration locaux
+          cp .env .env.backup 2>/dev/null || true
+          mkdir -p data/backup
+          cp data/*.db data/backup/ 2>/dev/null || true
+
+          # Pull des derniers changements
+          git pull origin main
+
+          # Restaurer les fichiers locaux
+          cp .env.backup .env 2>/dev/null || true
+          cp data/backup/*.db data/ 2>/dev/null || true
+
+          # Installer les dépendances
+          npm install
+
+          # Installer les dépendances frontend
+          cd frontend && npm install && npm run build && cd ..
+
+          # Démarrer l'application en arrière-plan
+          nohup npm start > app.log 2>&1 &
+
+          # Attendre un peu que l'app démarre
+          sleep 5
+
+          # Vérifier que l'app tourne
+          if curl -f http://localhost:3001/api/health > /dev/null 2>&1; then
+            echo "✅ Application déployée avec succès !"
+          else
+            echo "❌ Erreur : l'application ne répond pas"
+            cat app.log
+            exit 1
+          fi

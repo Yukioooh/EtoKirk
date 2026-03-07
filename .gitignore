@@ -1,0 +1,30 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+data/*.db
+*.log
+.DS_Store
+frontend/node_modules/
+frontend/build/
+
+# SSH keys (ne jamais commiter)
+*.pem
+*.key
+*.pub
+ssh/
+.github/ssh/
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Deployment files
+deploy-vps.sh
