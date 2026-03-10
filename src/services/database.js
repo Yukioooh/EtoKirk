@@ -156,6 +156,27 @@ function initDatabase() {
     )
   `);
 
+  // Table pour stocker les messages des vrais traitres (follow les 2 + chat les 2)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS traitor_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      streamer TEXT NOT NULL,
+      username TEXT NOT NULL,
+      timestamp INTEGER NOT NULL,
+      message_content TEXT NOT NULL
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_traitor_messages_username
+    ON traitor_messages(username)
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_traitor_messages_streamer_timestamp
+    ON traitor_messages(streamer, timestamp)
+  `);
+
   console.log('[DB] Base de donnees initialisee avec succes');
 }
 
@@ -277,6 +298,27 @@ const insertDailyReport = db.prepare(`
   VALUES (?, ?, ?, ?, ?, ?)
 `);
 
+// Gestion des messages des vrais traitres
+const insertTraitorMessage = db.prepare(`
+  INSERT INTO traitor_messages (streamer, username, timestamp, message_content)
+  VALUES (?, ?, ?, ?)
+`);
+
+const isConfirmedTraitor = db.prepare(`
+  SELECT 1 FROM chatters
+  WHERE username = ?
+    AND is_traitor = 1
+    AND follows_tikyjr = 1
+    AND follows_etostark = 1
+`);
+
+const getTraitorMessages = db.prepare(`
+  SELECT * FROM traitor_messages
+  WHERE username = ?
+  ORDER BY timestamp DESC
+  LIMIT ?
+`);
+
 module.exports = {
   db,
   initDatabase,
@@ -294,5 +336,8 @@ module.exports = {
   getTraitors,
   getTraitorStats,
   getChattersToCheckFollow,
-  insertDailyReport
+  insertDailyReport,
+  insertTraitorMessage,
+  isConfirmedTraitor,
+  getTraitorMessages
 };

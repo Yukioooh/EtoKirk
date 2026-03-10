@@ -22,12 +22,19 @@ class TraitorService {
   getAllTraitors(limit = 100) {
     try {
       const traitors = db.prepare(`
-        SELECT * FROM chatters
+        SELECT *,
+          MIN(messages_tikyjr, messages_etostark) as min_messages,
+          CASE
+            WHEN MAX(messages_tikyjr, messages_etostark) > 0
+            THEN MIN(messages_tikyjr, messages_etostark) * 1.0 * MIN(messages_tikyjr, messages_etostark) / MAX(messages_tikyjr, messages_etostark)
+            ELSE 0
+          END as balance_score
+        FROM chatters
         WHERE is_traitor = 1 OR traitor_score > 0
         ORDER BY
           CASE WHEN is_traitor = 1 THEN 0 ELSE 1 END,
-          traitor_score DESC,
-          messages_tikyjr + messages_etostark DESC
+          balance_score DESC,
+          min_messages DESC
         LIMIT ?
       `).all(limit);
 
@@ -249,7 +256,7 @@ class TraitorService {
     }
   }
 
-  // Top traitres par nombre de messages
+  // Top traitres par equilibre entre les deux chats
   getTopTraitors(limit = 20) {
     try {
       return db.prepare(`
@@ -258,6 +265,12 @@ class TraitorService {
           messages_tikyjr,
           messages_etostark,
           messages_tikyjr + messages_etostark as total_messages,
+          MIN(messages_tikyjr, messages_etostark) as min_messages,
+          CASE
+            WHEN MAX(messages_tikyjr, messages_etostark) > 0
+            THEN MIN(messages_tikyjr, messages_etostark) * 1.0 * MIN(messages_tikyjr, messages_etostark) / MAX(messages_tikyjr, messages_etostark)
+            ELSE 0
+          END as balance_score,
           traitor_score,
           traitor_level,
           follows_tikyjr,
@@ -266,7 +279,7 @@ class TraitorService {
           last_seen
         FROM chatters
         WHERE is_traitor = 1
-        ORDER BY total_messages DESC
+        ORDER BY balance_score DESC, min_messages DESC
         LIMIT ?
       `).all(limit).map(t => ({
         ...t,

@@ -4,7 +4,7 @@ const analysisService = require('../services/analysis');
 const traitorService = require('../services/traitorService');
 const followScraper = require('../services/followScraper');
 const vodChatScraper = require('../services/vodChatScraper');
-const { db } = require('../services/database');
+const { db, getTraitorMessages } = require('../services/database');
 
 // GET /stats/viewers/timeline
 // Parametres: start (timestamp), end (timestamp), hours (alternative: dernières X heures)
@@ -243,11 +243,18 @@ router.get('/traitors/top-detailed', (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
 
-    // Recuperer les top traitres
+    // Recuperer les top traitres (par equilibre entre les 2 chats)
     const traitors = db.prepare(`
-      SELECT * FROM chatters
+      SELECT *,
+        MIN(messages_tikyjr, messages_etostark) as min_messages,
+        CASE
+          WHEN MAX(messages_tikyjr, messages_etostark) > 0
+          THEN MIN(messages_tikyjr, messages_etostark) * 1.0 * MIN(messages_tikyjr, messages_etostark) / MAX(messages_tikyjr, messages_etostark)
+          ELSE 0
+        END as balance_score
+      FROM chatters
       WHERE is_traitor = 1
-      ORDER BY (messages_tikyjr + messages_etostark) DESC
+      ORDER BY balance_score DESC, min_messages DESC
       LIMIT ?
     `).all(limit);
 
@@ -305,6 +312,30 @@ router.get('/traitors/search', (req, res) => {
     }
     const results = traitorService.searchChatter(username);
     res.json({ success: true, data: results });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /stats/traitors/:username/messages
+// Messages d'un vrai traitre (follow les 2 + chat les 2)
+router.get('/traitors/:username/messages', (req, res) => {
+  try {
+    const username = req.params.username.toLowerCase();
+    const limit = parseInt(req.query.limit) || 50;
+
+    const messages = getTraitorMessages.all(username, limit);
+
+    res.json({
+      success: true,
+      data: messages.map(function(m) {
+        return {
+          streamer: m.streamer,
+          timestamp: m.timestamp * 1000,
+          content: m.message_content
+        };
+      })
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

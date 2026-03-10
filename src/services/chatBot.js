@@ -1,6 +1,6 @@
 const tmi = require('tmi.js');
 const crypto = require('crypto');
-const { insertChatMessage, upsertChatter, db } = require('./database');
+const { insertChatMessage, upsertChatter, db, insertTraitorMessage, isConfirmedTraitor } = require('./database');
 
 class ChatBotService {
   constructor() {
@@ -64,13 +64,14 @@ class ChatBotService {
       const username = tags.username.toLowerCase();
       const timestamp = Math.floor(Date.now() / 1000);
 
-      // Ajouter au buffer
+      // Ajouter au buffer (avec le contenu du message pour les traitres)
       this.messageBuffer.push({
         streamer,
         username,
         usernameHash: this.hashUsername(username),
         timestamp,
-        messageLength: message.length
+        messageLength: message.length,
+        messageContent: message
       });
     });
 
@@ -118,6 +119,17 @@ class ChatBotService {
           msg.timestamp,
           msg.messageLength
         );
+
+        // Stocker le message complet si c'est un vrai traitre (follow les 2 + chat les 2)
+        const confirmed = isConfirmedTraitor.get(msg.username);
+        if (confirmed) {
+          insertTraitorMessage.run(
+            msg.streamer,
+            msg.username,
+            msg.timestamp,
+            msg.messageContent
+          );
+        }
       }
 
       // Mettre a jour les chatters et detecter les traitres
