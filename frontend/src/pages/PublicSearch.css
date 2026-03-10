@@ -271,6 +271,90 @@
   50% { opacity: 1; }
 }
 
+/* Messages Section */
+.messages-section {
+  border-top: 1px solid #333333;
+  padding: 16px 20px;
+}
+
+.messages-button {
+  width: 100%;
+  padding: 10px 16px;
+  background: #1a1a1a;
+  border: 1px solid #333333;
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.messages-button:hover {
+  background: #252525;
+}
+
+.messages-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.messages-container {
+  margin-top: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.message-item {
+  background: #0a0a0a;
+  border: 1px solid #222222;
+  padding: 10px 12px;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.message-streamer {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.msg-tikyjr .message-streamer {
+  color: #9147ff;
+}
+
+.msg-etostark .message-streamer {
+  color: #00b5ad;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #555555;
+}
+
+.message-content {
+  font-size: 13px;
+  color: #cccccc;
+  word-break: break-word;
+}
+
+.no-messages {
+  margin-top: 16px;
+  padding: 20px;
+  text-align: center;
+  color: #666666;
+  background: #0a0a0a;
+  border: 1px solid #222222;
+}
+
 @media (max-width: 500px) {
   .result-grid {
     grid-template-columns: 1fr;

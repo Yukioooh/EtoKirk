@@ -9,6 +9,9 @@ function PublicSearch() {
   const [searched, setSearched] = useState(false);
   const [topTraitors, setTopTraitors] = useState([]);
   const [loadingTop, setLoadingTop] = useState(true);
+  const [messages, setMessages] = useState([]);
+  const [showMessages, setShowMessages] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const refreshTimerRef = useRef(null);
   const searchRefreshTimerRef = useRef(null);
 
@@ -78,6 +81,8 @@ function PublicSearch() {
 
     setLoading(true);
     setSearched(true);
+    setShowMessages(false);
+    setMessages([]);
 
     api.getViewerDetails(username.trim())
       .then(function(response) {
@@ -131,6 +136,42 @@ function PublicSearch() {
       return 'status-traitor';
     }
     return 'status-clean';
+  }
+
+  function isConfirmedTraitor(user) {
+    return user.isTraitor && user.tikyjr.follows === true && user.etostark.follows === true;
+  }
+
+  function loadMessages(user) {
+    if (showMessages) {
+      setShowMessages(false);
+      return;
+    }
+    setLoadingMessages(true);
+    api.getTraitorMessages(user.username, 100)
+      .then(function(response) {
+        if (response.success) {
+          setMessages(response.data);
+          setShowMessages(true);
+        }
+      })
+      .catch(function(err) {
+        console.error('Erreur chargement messages:', err);
+      })
+      .finally(function() {
+        setLoadingMessages(false);
+      });
+  }
+
+  function formatMessageTime(timestamp) {
+    if (!timestamp) return '';
+    var date = new Date(timestamp);
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   return (
@@ -219,6 +260,40 @@ function PublicSearch() {
                 <div className="result-footer">
                   <span>Premier message: {formatDate(result.firstSeen)}</span>
                 </div>
+
+                {isConfirmedTraitor(result) && (
+                  <div className="messages-section">
+                    <button
+                      className="messages-button"
+                      onClick={function() { loadMessages(result); }}
+                      disabled={loadingMessages}
+                    >
+                      {loadingMessages ? 'Chargement...' : showMessages ? 'Masquer les messages' : 'Voir les messages'}
+                    </button>
+
+                    {showMessages && messages.length > 0 && (
+                      <div className="messages-container">
+                        <div className="messages-list">
+                          {messages.map(function(msg, idx) {
+                            return (
+                              <div key={idx} className={'message-item ' + (msg.streamer === 'tikyjr' ? 'msg-tikyjr' : 'msg-etostark')}>
+                                <div className="message-header">
+                                  <span className="message-streamer">{msg.streamer === 'tikyjr' ? 'TikyJr' : 'Etostark'}</span>
+                                  <span className="message-time">{formatMessageTime(msg.timestamp)}</span>
+                                </div>
+                                <div className="message-content">{msg.content}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {showMessages && messages.length === 0 && (
+                      <div className="no-messages">Aucun message enregistre</div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="no-result">

@@ -127,6 +127,14 @@ const api = {
   getViewerDetails: async (username) => {
     const response = await axios.get(`${API_BASE}/stats/viewer/${encodeURIComponent(username)}`);
     return response.data;
+  },
+
+  // Messages d'un traitre confirme
+  getTraitorMessages: async (username, limit = 50) => {
+    const response = await axios.get(`${API_BASE}/stats/traitors/${encodeURIComponent(username)}/messages`, {
+      params: { limit }
+    });
+    return response.data;
   }
 };
 
