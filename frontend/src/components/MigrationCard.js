@@ -29,23 +29,11 @@ function MigrationCard() {
             <div key={idx} className="event-item">
               <div className="event-info">
                 <span className="event-title">
-                  <span className={`streamer-tag ${(() => {
-                    if (event.from_streamer === 'tikyjr') {
-                      return 'streamer-1';
-                    } else {
-                      return 'streamer-2';
-                    }
-                  })()}`}>
+                  <span className="streamer-tag">
                     {event.from_streamer}
                   </span>
                   {' -> '}
-                  <span className={`streamer-tag ${(() => {
-                    if (event.to_streamer === 'tikyjr') {
-                      return 'streamer-1';
-                    } else {
-                      return 'streamer-2';
-                    }
-                  })()}`}>
+                  <span className="streamer-tag">
                     {event.to_streamer}
                   </span>
                 </span>

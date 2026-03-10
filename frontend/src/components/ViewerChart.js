@@ -14,8 +14,8 @@ import { useApi } from '../hooks/useApi';
 import api from '../services/api';
 
 const COLORS = {
-  tikyjr: '#9146ff',
-  etostark: '#00b4d8'
+  tikyjr: '#ffffff',
+  etostark: '#666666'
 };
 
 function ViewerChart() {
@@ -81,19 +81,19 @@ function ViewerChart() {
       <div className="chart-container">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#303036" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#333333" />
             <XAxis
               dataKey="timestamp"
               tickFormatter={formatTime}
-              stroke="#adadb8"
+              stroke="#666666"
               fontSize={12}
             />
-            <YAxis stroke="#adadb8" fontSize={12} />
+            <YAxis stroke="#666666" fontSize={12} />
             <Tooltip
               contentStyle={{
-                background: '#1f1f23',
-                border: '1px solid #303036',
-                borderRadius: '8px'
+                background: '#111111',
+                border: '1px solid #333333',
+                borderRadius: '0'
               }}
               labelFormatter={formatDate}
               formatter={(value, name) => [value?.toLocaleString() || 'Offline', name]}

@@ -29,11 +29,11 @@ function DropEventsCard() {
             <div key={idx} className="event-item">
               <div className="event-info">
                 <span className="event-title">
-                  <span className={`streamer-tag ${event.affected_streamer === 'tikyjr' ? 'streamer-1' : 'streamer-2'}`}>
+                  <span className="streamer-tag">
                     {event.affected_streamer}
                   </span>
                   {' quand '}
-                  <span className={`streamer-tag ${event.triggering_streamer === 'tikyjr' ? 'streamer-1' : 'streamer-2'}`}>
+                  <span className="streamer-tag">
                     {event.triggering_streamer}
                   </span>
                   {event.trigger_event === 'START' ? ' lance' : ' coupe'}

@@ -19,22 +19,14 @@ function SummaryCard() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-        {streamers.map((streamer, idx) => {
+        {streamers.map((streamer) => {
           const stats = data.stats24h?.[streamer] || {};
-          const isStreamer1 = idx === 0;
 
           return (
             <div key={streamer} style={{
               background: 'var(--bg-secondary)',
-              borderRadius: '12px',
               padding: '20px',
-              borderLeft: `4px solid ${(() => {
-                if (isStreamer1) {
-                  return 'var(--streamer-1)';
-                } else {
-                  return 'var(--streamer-2)';
-                }
-              })()}`
+              border: '1px solid var(--border-color)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: (() => {
                 if (stats.currentlyLive) {

@@ -19,22 +19,20 @@ function AverageDropCard() {
         <div className="no-data">Pas assez de donnees</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {streamers.map((streamer, idx) => {
+          {streamers.map((streamer) => {
             const stats = data[streamer];
-            const isStreamer1 = idx === 0;
 
             return (
               <div
                 key={streamer}
                 style={{
                   background: 'var(--bg-secondary)',
-                  borderRadius: '8px',
                   padding: '16px',
-                  borderLeft: `4px solid ${isStreamer1 ? 'var(--streamer-1)' : 'var(--streamer-2)'}`
+                  border: '1px solid var(--border-color)'
                 }}
               >
                 <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
-                  <span className={`streamer-tag ${isStreamer1 ? 'streamer-1' : 'streamer-2'}`}>
+                  <span className="streamer-tag">
                     {streamer}
                   </span>
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
@@ -64,7 +62,7 @@ function AverageDropCard() {
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--warning)' }}>
+                    <div style={{ fontSize: '20px', fontWeight: 700, color: '#888888' }}>
                       {stats.maxDropPercent}%
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>

@@ -25,13 +25,13 @@ function OverlapCard() {
 
       <div className="stat-grid">
         <div className="stat-item">
-          <div className="stat-value" style={{ color: '#9146ff' }}>
+          <div className="stat-value">
             {data[streamerA] || 0}
           </div>
           <div className="stat-label">{streamerA}</div>
         </div>
         <div className="stat-item">
-          <div className="stat-value" style={{ color: '#00b4d8' }}>
+          <div className="stat-value">
             {data[streamerB] || 0}
           </div>
           <div className="stat-label">{streamerB}</div>
@@ -44,7 +44,7 @@ function OverlapCard() {
 
       <div className="overlap-stats">
         <span>{data.overlapCount} chatters communs</span>
-        <span style={{ fontWeight: 600, color: '#9146ff' }}>{data.overlapPercent}%</span>
+        <span style={{ fontWeight: 600 }}>{data.overlapPercent}%</span>
       </div>
     </div>
   );

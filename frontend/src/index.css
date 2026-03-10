@@ -6,48 +6,42 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, #0e0e10 0%, #18181b 100%);
-  color: #efeff1;
+  background: #0a0a0a;
+  color: #ffffff;
   min-height: 100vh;
 }
 
 :root {
-  --twitch-purple: #9146ff;
-  --twitch-purple-dark: #772ce8;
-  --bg-primary: #0e0e10;
-  --bg-secondary: #18181b;
-  --bg-card: #1f1f23;
-  --bg-hover: #26262c;
-  --text-primary: #efeff1;
-  --text-secondary: #adadb8;
-  --border-color: #303036;
-  --success: #00c853;
-  --warning: #ffc107;
-  --danger: #ff5252;
-  --streamer-1: #9146ff;
-  --streamer-2: #00b4d8;
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #111111;
+  --bg-card: #111111;
+  --bg-hover: #1a1a1a;
+  --text-primary: #ffffff;
+  --text-secondary: #888888;
+  --text-muted: #666666;
+  --border-color: #333333;
+  --accent: #ff4444;
+  --success: #00ff00;
+  --danger: #ff0000;
 }
 
 .app {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 40px 20px;
 }
 
 .header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 40px;
   padding-bottom: 24px;
   border-bottom: 1px solid var(--border-color);
 }
 
 .header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  background: linear-gradient(90deg, var(--streamer-1), var(--streamer-2));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 
@@ -59,12 +53,11 @@ body {
 .dashboard {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
+  gap: 20px;
 }
 
 .card {
   background: var(--bg-card);
-  border-radius: 12px;
   padding: 20px;
   border: 1px solid var(--border-color);
 }
@@ -74,39 +67,31 @@ body {
 }
 
 .card h2 {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.card h2::before {
-  content: '';
-  width: 4px;
-  height: 16px;
-  background: var(--twitch-purple);
-  border-radius: 2px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: 12px;
 }
 
 .stat-item {
   background: var(--bg-secondary);
   padding: 16px;
-  border-radius: 8px;
+  border: 1px solid var(--border-color);
   text-align: center;
 }
 
 .stat-value {
   font-size: 24px;
   font-weight: 700;
-  color: var(--twitch-purple);
+  color: var(--text-primary);
 }
 
 .stat-label {
@@ -118,19 +103,19 @@ body {
 .streamer-tag {
   display: inline-block;
   padding: 4px 8px;
-  border-radius: 4px;
   font-size: 12px;
   font-weight: 600;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .streamer-1 {
-  background: rgba(145, 70, 255, 0.2);
-  color: var(--streamer-1);
+  border-color: #666666;
 }
 
 .streamer-2 {
-  background: rgba(0, 180, 216, 0.2);
-  color: var(--streamer-2);
+  border-color: #666666;
 }
 
 .live-badge {
@@ -138,9 +123,9 @@ body {
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  background: rgba(255, 0, 0, 0.2);
-  color: #ff4444;
-  border-radius: 4px;
+  background: #1a0000;
+  color: #ff0000;
+  border: 1px solid #ff0000;
   font-size: 12px;
   font-weight: 600;
 }
@@ -149,8 +134,7 @@ body {
   content: '';
   width: 8px;
   height: 8px;
-  background: #ff4444;
-  border-radius: 50%;
+  background: #ff0000;
   animation: pulse 1.5s infinite;
 }
 
@@ -163,8 +147,8 @@ body {
   display: inline-block;
   padding: 4px 10px;
   background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border-radius: 4px;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
   font-size: 12px;
 }
 
@@ -177,8 +161,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 12px 0;
+  border-bottom: 1px solid #222222;
 }
 
 .event-item:last-child {
@@ -193,15 +177,17 @@ body {
 
 .event-title {
   font-weight: 500;
+  color: var(--text-primary);
 }
 
 .event-time {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .event-value {
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .event-value.negative {
@@ -215,14 +201,14 @@ body {
 .overlap-bar {
   height: 24px;
   background: var(--bg-secondary);
-  border-radius: 12px;
+  border: 1px solid var(--border-color);
   overflow: hidden;
   margin: 16px 0;
 }
 
 .overlap-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--streamer-1), var(--streamer-2));
+  background: #444444;
   transition: width 0.5s ease;
 }
 
@@ -230,20 +216,21 @@ body {
   display: flex;
   justify-content: space-between;
   font-size: 14px;
+  color: var(--text-secondary);
 }
 
 .loading {
   text-align: center;
   padding: 40px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .error {
   text-align: center;
   padding: 20px;
   color: var(--danger);
-  background: rgba(255, 82, 82, 0.1);
-  border-radius: 8px;
+  background: #1a0000;
+  border: 1px solid var(--danger);
 }
 
 .chart-container {
@@ -252,11 +239,10 @@ body {
 }
 
 .refresh-btn {
-  background: var(--twitch-purple);
-  color: white;
-  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   padding: 8px 16px;
-  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
@@ -264,7 +250,7 @@ body {
 }
 
 .refresh-btn:hover {
-  background: var(--twitch-purple-dark);
+  background: var(--bg-hover);
 }
 
 .time-selector {
@@ -278,7 +264,6 @@ body {
   color: var(--text-secondary);
   border: 1px solid var(--border-color);
   padding: 6px 12px;
-  border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
   transition: all 0.2s;
@@ -289,14 +274,58 @@ body {
 }
 
 .time-btn.active {
-  background: var(--twitch-purple);
-  color: white;
-  border-color: var(--twitch-purple);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: #666666;
 }
 
 .no-data {
   text-align: center;
   padding: 40px;
+  color: var(--text-muted);
+}
+
+/* Traitor Card specifics */
+.traitor-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.traitor-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #222222;
+}
+
+.traitor-item:last-child {
+  border-bottom: none;
+}
+
+.traitor-name {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.traitor-stats {
+  font-size: 12px;
   color: var(--text-secondary);
-  font-style: italic;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333333;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444444;
 }

@@ -36,15 +36,15 @@ function TraitorCard() {
             <div className="stat-label">Chatters totaux</div>
           </div>
           <div className="stat-item">
-            <div className="stat-value" style={{ color: '#ff5252' }}>{stats.confirmedTraitors || 0}</div>
+            <div className="stat-value" style={{ color: '#ff0000' }}>{stats.confirmedTraitors || 0}</div>
             <div className="stat-label">Traitres confirmes</div>
           </div>
           <div className="stat-item">
-            <div className="stat-value" style={{ color: '#ffc107' }}>{stats.potentialTraitors || 0}</div>
+            <div className="stat-value" style={{ color: '#888888' }}>{stats.potentialTraitors || 0}</div>
             <div className="stat-label">Traitres potentiels</div>
           </div>
           <div className="stat-item">
-            <div className="stat-value" style={{ color: '#ff5252' }}>{stats.traitorPercent}%</div>
+            <div className="stat-value" style={{ color: '#ff0000' }}>{stats.traitorPercent}%</div>
             <div className="stat-label">Taux de trahison</div>
           </div>
         </div>
@@ -60,7 +60,6 @@ function TraitorCard() {
           style={{
             flex: 1,
             padding: '10px 14px',
-            borderRadius: '8px',
             border: '1px solid var(--border-color)',
             background: 'var(--bg-secondary)',
             color: 'var(--text-primary)',
@@ -72,7 +71,7 @@ function TraitorCard() {
 
       {/* Resultats de recherche */}
       {searchResults && (
-        <div style={{ marginBottom: '20px', padding: '16px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+        <div style={{ marginBottom: '20px', padding: '16px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
           <h3 style={{ fontSize: '14px', marginBottom: '12px' }}>Resultats de recherche</h3>
           {searchResults.length === 0 ? (
             <p style={{ color: 'var(--text-secondary)' }}>Aucun resultat</p>
@@ -82,12 +81,12 @@ function TraitorCard() {
                 <div>
                   <span style={{ fontWeight: 600 }}>{chatter.username}</span>
                   {chatter.isTraitor && (
-                    <span style={{ marginLeft: '8px', padding: '2px 8px', background: 'rgba(255,82,82,0.2)', color: '#ff5252', borderRadius: '4px', fontSize: '11px' }}>
+                    <span style={{ marginLeft: '8px', padding: '2px 8px', background: '#1a0000', color: '#ff0000', border: '1px solid #ff0000', fontSize: '11px' }}>
                       TRAITRE
                     </span>
                   )}
                   {chatter.traitorLevel === 'TRAITRE POTENTIEL' && (
-                    <span style={{ marginLeft: '8px', padding: '2px 8px', background: 'rgba(255,193,7,0.2)', color: '#ffc107', borderRadius: '4px', fontSize: '11px' }}>
+                    <span style={{ marginLeft: '8px', padding: '2px 8px', background: '#1a1a1a', color: '#888888', border: '1px solid #666666', fontSize: '11px' }}>
                       SUSPECT
                     </span>
                   )}
@@ -100,7 +99,7 @@ function TraitorCard() {
           )}
           <button
             onClick={() => setSearchResults(null)}
-            style={{ marginTop: '10px', padding: '6px 12px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', borderRadius: '4px', cursor: 'pointer' }}
+            style={{ marginTop: '10px', padding: '6px 12px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer' }}
           >
             Fermer
           </button>
@@ -122,26 +121,27 @@ function TraitorCard() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: idx < 3 ? 'linear-gradient(135deg, #ff5252, #ff1744)' : 'var(--bg-secondary)',
-                  borderRadius: '50%',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
                   fontSize: '12px',
-                  fontWeight: 700
+                  fontWeight: 700,
+                  color: idx < 3 ? '#ff0000' : '#888888'
                 }}>
                   {idx + 1}
                 </span>
                 <div>
-                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>{traitor.username}</div>
+                  <div style={{ fontWeight: 600, marginBottom: '4px', color: '#ff4444' }}>{traitor.username}</div>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                    <span style={{ color: '#9146ff' }}>TikyJr: {traitor.messages_tikyjr}</span>
+                    <span>TikyJr: {traitor.messages_tikyjr}</span>
                     {' | '}
-                    <span style={{ color: '#00b4d8' }}>Etostark: {traitor.messages_etostark}</span>
+                    <span>Etostark: {traitor.messages_etostark}</span>
                     {traitor.follows_tikyjr === 1 && <span style={{ marginLeft: '8px' }}>Follow TikyJr</span>}
                     {traitor.follows_etostark === 1 && <span style={{ marginLeft: '8px' }}>Follow Etostark</span>}
                   </div>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: '#ff5252' }}>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff' }}>
                   {traitor.total_messages}
                 </div>
                 <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>messages</div>
